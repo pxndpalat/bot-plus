@@ -33,7 +33,7 @@ MVP ทำเพื่อความสนุก จึงให้ความ
 flowchart LR
     U["สมาชิกในกลุ่ม LINE"] --> L["LINE Platform"]
     L -->|"HTTPS webhook"| R["Reverse proxy / TLS"]
-    R --> A["Bot App: Node.js + TypeScript"]
+    R --> A["Bot App: Bun + Elysia + TypeScript"]
     A -->|"reply message"| L
     A --> P[("PostgreSQL")]
     A --> O["OpenAI Responses API\nsmall model"]

@@ -11,4 +11,4 @@ LINE AI bot สำหรับเพิ่มสีสันในกลุ่�
 - [ADR-0003: Persona memory](docs/adr/0003-persona-memory.md)
 - [ADR-0004: Data and safety](docs/adr/0004-data-and-safety.md)
 
-ขอบเขต MVP คือกลุ่มเดียว สมาชิกไม่เกินประมาณ 50 คน ข้อความต่ำกว่า 1,000 ข้อความต่อวัน ใช้ TypeScript, Node.js, PostgreSQL, OpenAI Responses API และ deploy ด้วย Docker Compose บนเซิร์ฟเวอร์ส่วนตัว
+ขอบเขต MVP คือกลุ่มเดียว สมาชิกไม่เกินประมาณ 50 คน ข้อความต่ำกว่า 1,000 ข้อความต่อวัน ใช้ TypeScript บน Bun, Elysia, PostgreSQL, OpenAI Responses API และ deploy ด้วย Docker Compose บนเซิร์ฟเวอร์ส่วนตัว

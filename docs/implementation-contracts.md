@@ -1,7 +1,7 @@
 # Implementation Contracts
 
 สถานะ: Locked for MVP implementation  
-Package manager: npm 10 (package-lock.json)
+Runtime และ package manager: Bun โดย pin version ใน `packageManager` (`bun.lock`)
 
 ## Module boundaries
 

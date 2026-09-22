@@ -9,7 +9,7 @@
 
 ## Decision
 
-ใช้ TypeScript + Node.js เป็น modular monolith หนึ่ง process และ PostgreSQL หนึ่งฐานข้อมูล Background job loop อยู่ใน process เดียวกับ webhook server แต่แยก module ชัดเจน งาน delayed เก็บใน PostgreSQL
+ใช้ TypeScript บน Bun runtime และ Elysia เป็น HTTP framework โดยจัดระบบเป็น modular monolith หนึ่ง process และ PostgreSQL หนึ่งฐานข้อมูล Background job loop อยู่ใน process เดียวกับ webhook server แต่แยก module ชัดเจน งาน delayed เก็บใน PostgreSQL
 
 ## Consequences
 

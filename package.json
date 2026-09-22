@@ -1,0 +1,35 @@
+{
+  "name": "mallnew-friends-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "scripts": {
+    "dev": "bun --watch src/app/index.ts",
+    "build": "bun build src/app/index.ts --outdir dist --target bun --sourcemap",
+    "start": "bun dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "bun test",
+    "test:integration": "bun test test/integration src/infrastructure",
+    "db:migrate": "bun -e \"const { runMigrationsFromEnvironment } = await import('./src/infrastructure/db/index.ts'); await runMigrationsFromEnvironment();\""
+  },
+  "dependencies": {
+    "@line/bot-sdk": "latest",
+    "elysia": "latest",
+    "kysely": "latest",
+    "openai": "latest",
+    "pg": "latest",
+    "pino": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "@types/node": "latest",
+    "@types/pg": "latest",
+    "eslint": "latest",
+    "prettier": "latest",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "latest"
+  }
+}
