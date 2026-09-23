@@ -56,11 +56,12 @@ export function assertSafeTestDatabaseUrl(databaseUrl: string): string {
   return parsed.toString();
 }
 
-export function requireTestDatabaseUrl(value = process.env.TEST_DATABASE_URL): string {
-  if (value === undefined) {
+export function requireTestDatabaseUrl(value?: string): string {
+  const candidate = arguments.length === 0 ? process.env.TEST_DATABASE_URL : value;
+  if (candidate === undefined) {
     throw new Error("TEST_DATABASE_URL is not set; refusing to use DATABASE_URL for tests");
   }
-  return assertSafeTestDatabaseUrl(value);
+  return assertSafeTestDatabaseUrl(candidate);
 }
 
 function quoteIdentifier(identifier: string): string {

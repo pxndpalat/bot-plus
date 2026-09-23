@@ -13,6 +13,13 @@ const REPLY_TOKEN_LIFETIME_MS = 60_000;
 
 export interface WebhookIngestRepositoryOptions {
   readonly idGenerator?: () => string;
+  readonly dailyTokenBudget?: number;
+  readonly ambientMinDelaySeconds?: number;
+  readonly ambientMaxDelaySeconds?: number;
+  readonly ambientCooldownSeconds?: number;
+  readonly rawMessageRetentionDays?: number;
+  readonly contentLogRetentionDays?: number;
+  readonly personaDecayDays?: number;
 }
 
 function idGenerator(): string {
@@ -50,6 +57,25 @@ export function canonicalMediaMetadata(metadata: JsonObject): JsonValue {
     return jsonValue({ ...(unknownMetadata as JsonObject), ...rest });
   }
   return jsonValue(metadata);
+}
+
+/** Persist text addressing data with provider metadata so durable jobs can
+ * reconstruct command/direct invocation semantics after a restart. */
+export function persistedMessageMetadata(message: LineMessage): JsonValue {
+  const canonical = canonicalMediaMetadata(message.metadata);
+  if (message.type !== "text") return canonical;
+  const base = typeof canonical === "object" && canonical !== null && !Array.isArray(canonical)
+    ? canonical
+    : { providerMetadata: canonical };
+  return jsonValue({
+    ...base,
+    mentions: message.mentions.map((mention) => ({
+      index: mention.index,
+      length: mention.length,
+      isSelf: mention.isSelf,
+      ...(mention.userId ? { userId: String(mention.userId) } : {}),
+    })),
+  });
 }
 
 function sourceGroupId(event: LineEvent): string {
@@ -115,11 +141,35 @@ function messageJobs(event: LineMessageEvent, messageId: string): readonly Inges
   return jobs;
 }
 
-async function ensureGroup(trx: Kysely<Database>, groupId: string, at: Date): Promise<void> {
+async function ensureGroup(
+  trx: Kysely<Database>,
+  groupId: string,
+  at: Date,
+  defaults: WebhookIngestRepositoryOptions,
+): Promise<void> {
   await trx
     .insertInto("groups")
     .values({ id: groupId, line_group_id: groupId, joined_at: at, created_at: at, updated_at: at })
     .onConflict((oc) => oc.column("line_group_id").doUpdateSet({ updated_at: at }))
+    .execute();
+  await trx
+    .insertInto("group_settings")
+    .values({
+      group_id: groupId,
+      mode: "normal",
+      muted_until: null,
+      ambient_enabled: true,
+      ambient_min_delay_seconds: defaults.ambientMinDelaySeconds ?? 15,
+      ambient_max_delay_seconds: defaults.ambientMaxDelaySeconds ?? 30,
+      ambient_cooldown_seconds: defaults.ambientCooldownSeconds ?? 180,
+      daily_token_budget: defaults.dailyTokenBudget ?? 100_000,
+      raw_message_retention_days: defaults.rawMessageRetentionDays ?? 30,
+      content_log_retention_days: defaults.contentLogRetentionDays ?? 7,
+      persona_decay_days: defaults.personaDecayDays ?? 180,
+      created_at: at,
+      updated_at: at,
+    })
+    .onConflict((oc) => oc.column("group_id").doNothing())
     .execute();
 }
 
@@ -151,7 +201,7 @@ export function createWebhookIngestRepository(
   const recordVerifiedEvent = async (event: LineEvent): Promise<WebhookIngestResult> => {
       const groupId = sourceGroupId(event);
       return db.transaction().execute(async (trx) => {
-        await ensureGroup(trx, groupId, event.eventAt);
+        await ensureGroup(trx, groupId, event.eventAt, options);
         if (event.source.userId) await ensureMember(trx, groupId, String(event.source.userId), event.eventAt);
 
         const databaseEventId = nextId();
@@ -200,7 +250,7 @@ export function createWebhookIngestRepository(
               line_message_id: String(event.message.id),
               message_type: messageType(event.message),
               text_content: event.message.type === "text" ? event.message.text : null,
-              media_metadata: canonicalMediaMetadata(event.message.metadata),
+              media_metadata: persistedMessageMetadata(event.message),
               line_quoted_message_id: event.message.quotedMessageId ? String(event.message.quotedMessageId) : null,
               sent_at: event.eventAt,
               received_at: event.receivedAt,
@@ -215,6 +265,9 @@ export function createWebhookIngestRepository(
           jobs.push(jobIntent("unsend", String(event.webhookEventId), event.receivedAt));
         } else {
           await memberEventMembers(trx, event, groupId);
+          if (event.type === "join" && event.replyToken) {
+            jobs.push(jobIntent("join_transparency", String(event.webhookEventId), event.receivedAt));
+          }
         }
 
         for (const job of jobs) {
@@ -234,6 +287,11 @@ export function createWebhookIngestRepository(
                 webhookEventId: String(event.webhookEventId),
                 jobType: job.type,
                 targetMessageId: event.type === "unsend" ? String(event.messageId) : undefined,
+                replyToken: event.type === "join" ? event.replyToken : undefined,
+                replyTokenReceivedAt: event.type === "join" && event.replyToken ? event.receivedAt.toISOString() : undefined,
+                replyTokenExpiresAt: event.type === "join" && event.replyToken
+                  ? new Date(event.receivedAt.getTime() + REPLY_TOKEN_LIFETIME_MS).toISOString()
+                  : undefined,
               }),
               created_at: event.receivedAt,
               updated_at: event.receivedAt,

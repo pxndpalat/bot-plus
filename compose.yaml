@@ -1,0 +1,73 @@
+name: mallnew-friends-bot
+
+x-app-service: &app-service
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: mallnew-friends-bot:local
+  env_file:
+    # Keep this file out of git. MFB_ENV_FILE is useful for staging/CI.
+    - ${MFB_ENV_FILE:-.env}
+  environment:
+    NODE_ENV: production
+    HOST: 0.0.0.0
+    PORT: 3000
+    DATABASE_URL: postgresql://${POSTGRES_USER:-mallnew}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@postgres:5432/${POSTGRES_DB:-mallnew_friends_bot}
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mallnew_friends_bot}
+      POSTGRES_USER: ${POSTGRES_USER:-mallnew}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+  # A failed migration exits non-zero. bot-app depends on successful completion,
+  # so application traffic is never started against an unknown schema.
+  migrate:
+    <<: *app-service
+    command: ["bun", "run", "db:migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: "no"
+    stop_grace_period: 30s
+
+  bot-app:
+    <<: *app-service
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:3000/health/ready').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+    stop_grace_period: 45s
+
+volumes:
+  postgres-data:
+    name: mallnew-friends-bot-postgres
+
+networks:
+  backend:
+    name: mallnew-friends-bot-backend

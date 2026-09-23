@@ -1,6 +1,6 @@
 import type { LineEvent } from "../line-adapter/index.ts";
 
-export type IngestJobType = "direct" | "ambient_candidate" | "persona_extract" | "unsend";
+export type IngestJobType = "direct" | "ambient_candidate" | "persona_extract" | "unsend" | "join_transparency";
 
 export interface IngestJobIntent {
   readonly type: IngestJobType;

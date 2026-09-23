@@ -2,8 +2,8 @@ import { Kysely, sql } from "kysely";
 import { bangkokBudgetDay, startOfBangkokBudgetDay } from "../../../../shared/index.ts";
 import { getMigrationStatus } from "../../index.ts";
 import type { Database } from "../../types.ts";
-import type { SettingsRepository } from "../../../../modules/settings/ports.ts";
 import type {
+  SettingsRepository,
   BudgetDecision,
   BudgetSnapshot,
   BudgetUsageInput,
@@ -12,7 +12,7 @@ import type {
   RetentionPolicy,
   SettingsAuditInput,
   SettingsStatusSnapshot,
-} from "../../../../modules/settings/types.ts";
+} from "../../../../modules/settings/index.ts";
 
 interface SettingsRow {
   group_id: string;

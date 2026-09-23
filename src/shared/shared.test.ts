@@ -96,18 +96,21 @@ test("environment configuration parses configurable values and durations", () =>
       AMBIENT_DELAY_MIN_SECONDS: "20",
       AMBIENT_DELAY_MAX_SECONDS: "40",
       CONTEXT_WINDOW_MINUTES: "12",
-      CONTEXT_LIMIT: "25"
+      CONTEXT_LIMIT: "25",
+      DAILY_AI_TOKEN_BUDGET: "12345"
     });
     assert.equal(config.openAiModel, "gpt-custom");
     assert.equal(config.ambientDelayMin, 20_000);
     assert.equal(config.ambientDelayMax, 40_000);
     assert.equal(config.contextWindow, 12 * DURATION.minute);
     assert.equal(config.contextLimit, 25);
+    assert.equal(config.dailyAiTokenBudget, 12_345);
 });
 
 test("environment configuration fails fast for missing or malformed values", () => {
     assert.throws(() => parseEnvironment({ ...validEnvironment, DATABASE_URL: "" }), ValidationError);
     assert.throws(() => parseEnvironment({ ...validEnvironment, CONTEXT_LIMIT: "nope" }), ValidationError);
+    assert.throws(() => parseEnvironment({ ...validEnvironment, DAILY_AI_TOKEN_BUDGET: "0" }), ValidationError);
     assert.throws(
       () => parseEnvironment({ ...validEnvironment, AMBIENT_DELAY_MIN_SECONDS: "40", AMBIENT_DELAY_MAX_SECONDS: "20" }),
       ValidationError

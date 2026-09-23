@@ -23,7 +23,7 @@ test("webhook repository deduplicates redelivery and persists jobs atomically", 
           id: "line-message-integration-1",
           type: "text",
           text: "hello",
-          mention: { mentionees: [] },
+          mention: { mentionees: [{ index: 0, length: 4, type: "user", isSelf: true }] },
           unknownMetadata: { provider: true },
         },
       }],
@@ -44,13 +44,18 @@ test("webhook repository deduplicates redelivery and persists jobs atomically", 
       db.selectFrom("webhook_events").select(({ fn }) => fn.countAll<number>().as("count")).executeTakeFirstOrThrow(),
       db.selectFrom("messages").select(({ fn }) => fn.countAll<number>().as("count")).executeTakeFirstOrThrow(),
       db.selectFrom("delayed_jobs").select(({ fn }) => fn.countAll<number>().as("count")).executeTakeFirstOrThrow(),
+      db.selectFrom("group_settings").select(({ fn }) => fn.countAll<number>().as("count")).executeTakeFirstOrThrow(),
     ]);
     assert.equal(Number(counts[0].count), 1);
     assert.equal(Number(counts[1].count), 1);
     assert.equal(Number(counts[2].count), 2);
+    assert.equal(Number(counts[3].count), 1);
     const message = await db.selectFrom("messages").selectAll().executeTakeFirstOrThrow();
     assert.equal(message.text_content, "hello");
-    assert.deepEqual(message.media_metadata, { provider: true });
+    assert.deepEqual(message.media_metadata, {
+      provider: true,
+      mentions: [{ index: 0, length: 4, isSelf: true }],
+    });
     assert.equal(message.sent_at.toISOString(), "2026-01-01T00:00:00.000Z");
     assert.equal(message.received_at.toISOString(), "2026-01-01T00:00:01.000Z");
   } finally {

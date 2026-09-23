@@ -10,6 +10,7 @@ export type Environment = Readonly<{
   openAiModel: string;
   databaseUrl: string;
   adminLineUserIds: readonly MemberId[];
+  dailyAiTokenBudget: number;
   rawMessageRetentionDays: number;
   contentLogRetentionDays: number;
   personaDecayDays: number;
@@ -33,6 +34,7 @@ export const environmentSchema = z.object({
   OPENAI_MODEL: z.string().trim().min(1).default("gpt-5-nano"),
   DATABASE_URL: z.string().trim().min(1),
   ADMIN_LINE_USER_IDS: z.string().trim().min(1),
+  DAILY_AI_TOKEN_BUDGET: z.string().optional(),
   RAW_MESSAGE_RETENTION_DAYS: z.string().optional(),
   CONTENT_LOG_RETENTION_DAYS: z.string().optional(),
   PERSONA_DECAY_DAYS: z.string().optional(),
@@ -49,6 +51,7 @@ const defaultValue = {
   rawMessageRetentionDays: 30,
   contentLogRetentionDays: 7,
   personaDecayDays: 180,
+  dailyAiTokenBudget: 100_000,
   ambientDelayMinSeconds: 15,
   ambientDelayMaxSeconds: 30,
   cooldownMinSeconds: 3 * 60,
@@ -131,6 +134,7 @@ export function parseEnvironment(input: EnvironmentInput): Environment {
     openAiModel: input.OPENAI_MODEL?.trim() || "gpt-5-nano",
     databaseUrl: required(input, "DATABASE_URL"),
     adminLineUserIds: adminIds(input),
+    dailyAiTokenBudget: positiveInteger(input, "DAILY_AI_TOKEN_BUDGET", defaultValue.dailyAiTokenBudget),
     rawMessageRetentionDays: positiveInteger(input, "RAW_MESSAGE_RETENTION_DAYS", defaultValue.rawMessageRetentionDays),
     contentLogRetentionDays: positiveInteger(input, "CONTENT_LOG_RETENTION_DAYS", defaultValue.contentLogRetentionDays),
     personaDecayDays: positiveInteger(input, "PERSONA_DECAY_DAYS", defaultValue.personaDecayDays),
